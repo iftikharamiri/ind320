@@ -13,7 +13,6 @@ venv/
 # Streamlit secrets - never commit API keys
 .streamlit/secrets.toml
 .env
-
 # OS
 Thumbs.db
 desktop.ini
