@@ -13,7 +13,7 @@ venv/
 # Streamlit secrets - never commit API keys
 .streamlit/secrets.toml
 .env
-
+class-exercise
 # OS
 Thumbs.db
 desktop.ini
