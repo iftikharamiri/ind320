@@ -13,6 +13,15 @@ venv/
 # Streamlit secrets - never commit API keys
 .streamlit/secrets.toml
 .env
+
+# Database passwords for class exercises - never commit
+class-exercise/passwrod.txt
+class-exercise/password*
+
+# Local-only folders, not part of the hand-in
+class-exercise/
+.claude/
+
 # OS
 Thumbs.db
 desktop.ini

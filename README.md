@@ -8,9 +8,9 @@ Project work for IND320 at NMBU.
 .
 ├── .streamlit/config.toml
 ├── modules/            shared logic imported by pages
-├── pages/              Streamlit pages
+├── app_pages/          Streamlit pages (home, data table, plots, about)
 ├── notebooks/          project_work_partN.ipynb
-├── data/
+├── data/               reservoirs.csv (read by the app, cached)
 ├── main.py             app entry point
 └── requirements.txt
 ```
@@ -33,7 +33,4 @@ Running `/triage-feedback` in Claude Code reads that inbox, checks it against th
 open issues, opens one issue per actionable item, and moves the file to
 `feedback/processed/`.
 
-To enable it, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
-and fill in a shared password and a fine-grained GitHub token scoped to this repo
-with *Contents: read and write*. On Streamlit Community Cloud, paste the same
-content into Settings → Secrets.
+
