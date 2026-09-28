@@ -15,7 +15,7 @@ st.markdown(
     "- GitHub repository: https://github.com/iftikharamiri/ind320\n"
     "- Streamlit app: https://ind320-iftikhar-amiri.streamlit.app/\n"
     "- Part 1: CSV data, notebook and this app.\n"
-    "- Part 2: the data will move from the CSV file to MongoDB."
+    
 )
 
 
