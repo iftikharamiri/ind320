@@ -89,7 +89,7 @@ else:
             color=color,
             tooltip=tooltip,
         )
-        .properties(width=700, height=110)
+        .properties(width=560, height=110)
         .facet(
             row=alt.Row(
                 "label:N",
