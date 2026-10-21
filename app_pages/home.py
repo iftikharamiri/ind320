@@ -25,8 +25,9 @@ with st.container(horizontal=True):
 st.subheader("Pages")
 st.markdown(
     """
-- :material/table: **Data table**: one row per column, with a small chart of the first month.
-- :material/show_chart: **Plots**: plot one column or all columns for a chosen range of months.
+- :material/table: **Data table**: one row per area, with small charts of the first month.
+- :material/show_chart: **Plots**: choose a download interval and a type of area, then plot the columns.
+- :material/swap_horiz: **Cross-border flows**: power exchange between Norway and its neighbours (ENTSO-E, via MongoDB).
 - :material/info: **About**: data source and project links.
 
 Use the menu in the sidebar to switch pages.
