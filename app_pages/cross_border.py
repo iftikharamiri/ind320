@@ -80,7 +80,13 @@ with right:
             .encode(
                 x=alt.X("time:T", title="Time (UTC)"),
                 y=alt.Y("mw:Q", title="Power (MW)"),
-                color=alt.Color("series:N", scale=alt.Scale(domain=series), title="Connection and direction"),
+                color=alt.Color(
+                    "series:N",
+                    # 18 lines: category20 has 10 dark/light pairs, one pair per connection
+                    # (the sorted names put "in" and "out" of a connection next to each other)
+                    scale=alt.Scale(domain=series, scheme="category20"),
+                    title="Connection and direction",
+                ),
                 strokeDash=alt.StrokeDash("direction:N", legend=None),
                 tooltip=["time:T", "series:N", alt.Tooltip("mw:Q", format=",.0f")],
             )
