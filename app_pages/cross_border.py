@@ -49,7 +49,10 @@ with left:
             theta="GWh:Q",
             color=alt.Color(
                 "Direction:N",
-                scale=alt.Scale(domain=list(DIRECTION_NAMES.values()), range=PALETTE[:2]),
+                # Same colours as the notebook: out = orange, in = blue
+                scale=alt.Scale(
+                    domain=list(DIRECTION_NAMES.values()), range=[PALETTE[1], PALETTE[0]]
+                ),
             ),
             tooltip=["Direction:N", alt.Tooltip("GWh:Q", format=",.0f")],
         )
