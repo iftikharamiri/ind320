@@ -1,18 +1,19 @@
-"""Loading and preparing reservoirs.csv, shared by all pages.
+"""Loading and preparing the NVE reservoir data (Magasinstatistikk API), shared by all pages.
 
-Mirrors the cleaning steps in notebooks/project_work_part1.ipynb (sections 2-3),
-so the notebook and the app show the same data. In part 2 the CSV will be
-replaced by MongoDB; only `load_reservoirs()` should need to change then.
+Part 2: the CSV file from part 1 is gone; the data now comes straight from the
+NVE API. Cleaning mirrors notebooks/project_work_part2.ipynb, so the notebook and
+the app show the same data.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
+import requests
 import streamlit as st
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "reservoirs.csv"
+# Public endpoint, no key needed. It takes no parameters and always returns every
+# area and every week since 1995 (about 15 000 rows, 1.4 MB as JSON).
+API_URL = "https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentligData"
 
 # Original Norwegian NVE headers -> English names (same as the notebook)
 COLUMN_NAMES = {
@@ -51,20 +52,36 @@ def _area_label(area_type: str, area_number: int) -> str:
     return f"Watercourse {area_number}"
 
 
-@st.cache_data(max_entries=1, show_spinner="Loading reservoir data...")
-def load_reservoirs() -> pd.DataFrame:
-    """Read the CSV once per app process and return it cleaned, in long format.
+@st.cache_data(ttl=3600, show_spinner="Downloading reservoir data from NVE...")
+def _download() -> pd.DataFrame:
+    """One call to the NVE API, cleaned and in long format.
 
-    `st.cache_data` stores the result, so switching pages or moving a widget
-    does not read and parse the 1.4 MB file again.
+    Cached for an hour: NVE publishes once a week, so there is no point in calling
+    the API on every rerun. `timeout` stops the app hanging if NVE is down.
     """
-    df = pd.read_csv(DATA_PATH).rename(columns=COLUMN_NAMES)
+    response = requests.get(API_URL, timeout=60)
+    response.raise_for_status()
+    df = pd.DataFrame(response.json()).rename(columns=COLUMN_NAMES)
     df["date"] = pd.to_datetime(df["date"])
     # Publishing metadata only, and holds the placeholder 0001-01-01 in old rows
     df = df.drop(columns="next_publish_date")
     df["area"] = [_area_label(t, n) for t, n in zip(df["area_type"], df["area_number"])]
-    # The file is shuffled; sort so every area is a clean time series
+    # The API returns the rows shuffled; sort so every area is a clean time series
     return df.sort_values(["area", "date"]).reset_index(drop=True)
+
+
+def load_reservoirs(start=None, end=None) -> pd.DataFrame:
+    """The reservoir data for the interval [start, end] (both inclusive).
+
+    The API cannot filter by date, so the whole history is downloaded once (cached)
+    and the interval is cut out here. With no arguments, everything is returned.
+    """
+    df = _download()
+    if start is not None:
+        df = df[df["date"] >= pd.Timestamp(start)]
+    if end is not None:
+        df = df[df["date"] <= pd.Timestamp(end)]
+    return df
 
 
 def area_options(df: pd.DataFrame) -> list[str]:
@@ -75,3 +92,17 @@ def area_options(df: pd.DataFrame) -> list[str]:
 def area_series(df: pd.DataFrame, area: str) -> pd.DataFrame:
     """The weekly measured columns for one area, indexed by date."""
     return df[df["area"] == area].set_index("date")[list(MEASURES)]
+
+
+# The three kinds of areas in the API, with a readable name for the radio buttons
+AREA_TYPES = {
+    "EL": "EL - price areas (NO1-NO5)",
+    "NO": "NO - Norway as a whole",
+    "VASS": "VASS - watercourse areas",
+}
+
+
+def areas_of_type(df: pd.DataFrame, area_type: str) -> list[str]:
+    """Area names of one type in number order, e.g. EL -> NO1 ... NO5."""
+    sub = df[df["area_type"] == area_type]
+    return sub.sort_values("area_number")["area"].unique().tolist()

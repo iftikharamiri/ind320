@@ -7,7 +7,8 @@ st.title("About")
 st.subheader("Data source")
 st.write(
     "Reservoir statistics from NVE (Norwegian Water Resources and Energy "
-    "Directorate), provided as `reservoirs.csv` in the IND320 course material."
+    "Directorate), downloaded live from the Magasinstatistikk API. Power exchange data "
+    "comes from the ENTSO-E Transparency Platform and is stored in MongoDB Atlas."
 )
 
 st.subheader("Project")

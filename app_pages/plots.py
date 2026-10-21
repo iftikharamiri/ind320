@@ -1,14 +1,12 @@
-"""Plots page: one column or all columns, for a chosen range of months."""
+"""Plots page: the slider chooses what is downloaded, radio buttons choose the areas."""
 
 import altair as alt
 import pandas as pd
 import streamlit as st
 
-from modules.data import MEASURES, PALETTE, area_options, area_series, load_reservoirs
+from modules.data import AREA_TYPES, MEASURES, PALETTE, areas_of_type, load_reservoirs
 
 st.title("Plots")
-
-df = load_reservoirs()  # cached, see modules/data.py
 
 ALL = "All columns"
 LABELS = [label for label, _ in MEASURES.values()]
@@ -19,67 +17,75 @@ def month_name(month: str) -> str:
     return pd.Period(month, freq="M").strftime("%b %Y")
 
 
-# --- Controls ---------------------------------------------------------------
-with st.container(horizontal=True):
-    area = st.selectbox("Area", area_options(df))
-    column = st.selectbox(
-        "Column",
-        [ALL, *MEASURES],
-        format_func=lambda c: c if c == ALL else MEASURES[c][0],
-    )
+# --- Download interval ------------------------------------------------------
+# The slider decides which data are downloaded/loaded. The list of selectable
+# months comes from the full (cached) download.
+full = load_reservoirs()
+months = sorted(full["date"].dt.strftime("%Y-%m").unique())
 
-series = area_series(df, area)
-
-# Month of every weekly row as text, "1995-01", "1995-02", ...
-# Text in YYYY-MM form sorts in time order, so it can be compared with >= and <=.
-row_months = series.index.strftime("%Y-%m")
-months = sorted(row_months.unique())
-
-# Range slider over months. value=(first, first) makes the default the first month.
-start, end = st.select_slider(
-    "Months",
+start_m, end_m = st.select_slider(
+    "Download interval (months)",
     options=months,
-    value=(months[0], months[0]),
+    value=(months[0], months[0]),  # default: the first month of the data
     format_func=month_name,
 )
+# First day of the first month .. last day of the last month
+start = pd.Period(start_m, freq="M").start_time
+end = pd.Period(end_m, freq="M").end_time
+st.session_state["interval"] = (start, end)  # the Data table page reads this
 
-# Keep the weeks whose month is inside the chosen range (cheap, so not cached)
-subset = series[(row_months >= start) & (row_months <= end)]
+df = load_reservoirs(start, end)
+period_text = month_name(start_m) if start_m == end_m else f"{month_name(start_m)} - {month_name(end_m)}"
 
-period_text = month_name(start) if start == end else f"{month_name(start)} - {month_name(end)}"
+# --- Other controls ---------------------------------------------------------
+area_type = st.radio(
+    "Area type", list(AREA_TYPES), format_func=AREA_TYPES.get, horizontal=True
+)
+areas = areas_of_type(df, area_type)
+column = st.selectbox(
+    "Column",
+    [ALL, *MEASURES],
+    format_func=lambda c: c if c == ALL else MEASURES[c][0],
+)
 
 # --- Plot -------------------------------------------------------------------
-# Long format (date, column, value) is what Altair expects for coloured lines
-long = subset.reset_index().melt("date", var_name="column", value_name="value")
+# Long format (date, area, column, value) is what Altair expects for coloured lines
+subset = df[df["area"].isin(areas)]
+long = subset.melt(
+    id_vars=["date", "area"],
+    value_vars=list(MEASURES),
+    var_name="column",
+    value_name="value",
+)
 long["label"] = long["column"].map(lambda c: MEASURES[c][0])
 
-# Fixed colour per column, in the same order as the notebook
-color = alt.Color("label:N", scale=alt.Scale(domain=LABELS, range=PALETTE), legend=None)
+# One colour per area of the chosen type (the palette has 5 colours, enough for NO1-NO5)
+color = alt.Color("area:N", scale=alt.Scale(domain=areas, range=PALETTE[: len(areas)]), title="Area")
 x = alt.X("date:T", title="Date")
 tooltip = [
     alt.Tooltip("date:T", title="Week of"),
-    alt.Tooltip("label:N", title="Column"),
+    alt.Tooltip("area:N", title="Area"),
     alt.Tooltip("value:Q", title="Value", format=".3f"),
 ]
 
 if column != ALL:
-    # A single column on its own axis, in its real unit
+    # A single column, one line per area, in its real unit
     label = MEASURES[column][0]
     chart = (
-        alt.Chart(long[long["column"] == column], title=f"{area} - {label}, {period_text}")
+        alt.Chart(long[long["column"] == column], title=f"{label}, {period_text}")
         .mark_line(point=True, strokeWidth=2)
         .encode(
             x=x,
             y=alt.Y("value:Q", title=label, scale=alt.Scale(zero=False)),
             color=color,
+            detail="area:N",
             tooltip=tooltip,
         )
     )
     st.altair_chart(chart)
 else:
     # The columns have very different scales (0-1 vs up to ~87 TWh), so one shared
-    # y-axis would flatten most lines. Instead: one panel per column with its own
-    # y-axis and a shared time axis (small multiples), as argued in the notebook.
+    # y-axis would flatten most lines: one panel per column with its own y-axis.
     chart = (
         alt.Chart(long)
         .mark_line(point=True, strokeWidth=2)
@@ -97,12 +103,12 @@ else:
                 sort=LABELS,
                 header=alt.Header(labelAngle=0, labelAlign="left", labelLimit=220),
             ),
-            title=f"{area} - all columns, {period_text}",
+            title=f"All columns, {period_text}",
         )
         .resolve_scale(y="independent")
     )
     st.altair_chart(chart)
     st.caption(
         "Each panel has its own y-axis, because the columns use very different "
-        "units. Capacity is constant, so its panel is flat."
+        "units. Capacity is constant per area, so its lines are flat."
     )

@@ -16,6 +16,7 @@ page = st.navigation(
         st.Page("app_pages/home.py", title="Home", icon=":material/home:", default=True),
         st.Page("app_pages/data_table.py", title="Data table", icon=":material/table:"),
         st.Page("app_pages/plots.py", title="Plots", icon=":material/show_chart:"),
+        st.Page("app_pages/cross_border.py", title="Cross-border flows", icon=":material/swap_horiz:"),
         st.Page("app_pages/about.py", title="About", icon=":material/info:"),
     ],
     position="sidebar",
