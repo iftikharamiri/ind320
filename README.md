@@ -7,13 +7,26 @@ Project work for IND320 at NMBU.
 ```
 .
 ├── .streamlit/config.toml
-├── modules/            shared logic imported by pages
-├── app_pages/          Streamlit pages (home, data table, plots, about)
-├── notebooks/          project_work_partN.ipynb
-├── data/               reservoirs.csv (read by the app, cached)
+├── modules/            shared logic imported by pages (data.py = NVE API, mongo.py = MongoDB)
+├── app_pages/          Streamlit pages (home, data table, plots, cross-border flows, about)
+├── notebooks/          project_work_partN.ipynb (+ PDF export)
+├── screencast/         part 1 and part 2 screencasts
 ├── main.py             app entry point
 └── requirements.txt
 ```
+
+## Data
+
+- **Reservoirs:** NVE Magasinstatistikk API, downloaded live by the app (cached for one hour).
+- **Cross-border power flows:** ENTSO-E Transparency Platform -> Spark -> Cassandra (local)
+  -> Spark -> MongoDB Atlas. The app reads the curated data from MongoDB.
+  The pipeline is in `notebooks/project_work_part2.ipynb`.
+
+## Secrets
+
+Never committed. Locally they live in `.streamlit/secrets.toml` (see
+`.streamlit/secrets.toml.example`); on Streamlit Community Cloud they are pasted into
+Settings > Secrets. The app needs a `[mongo]` section.
 
 ## Run locally
 
