@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from modules.data import AREA_TYPES, MEASURES, PALETTE, areas_of_type, load_reservoirs
+from modules.selector import current_area
 
 st.title("Plots")
 
@@ -38,9 +39,10 @@ df = load_reservoirs(start, end)
 period_text = month_name(start_m) if start_m == end_m else f"{month_name(start_m)} - {month_name(end_m)}"
 
 # --- Other controls ---------------------------------------------------------
-area_type = st.radio(
-    "Area type", list(AREA_TYPES), format_func=AREA_TYPES.get, horizontal=True
-)
+# The area type comes from the global radio buttons in the sidebar (modules/selector.py);
+# this page draws one line per area of that type
+area_type, _ = current_area()
+st.caption(f"Area type: **{AREA_TYPES[area_type]}** (change it in the sidebar)")
 areas = areas_of_type(df, area_type)
 column = st.selectbox(
     "Column",

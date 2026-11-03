@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from modules.data import AREA_TYPES, MEASURES, areas_of_type, load_reservoirs
+from modules.selector import current_area
 
 st.title("Data table")
 
@@ -11,10 +12,10 @@ st.title("Data table")
 start, end = st.session_state.get("interval", (None, None))
 df = load_reservoirs(start, end)  # cached download, see modules/data.py
 
-# Radio buttons choose the kind of area; the table gets one row per area of that kind
-area_type = st.radio(
-    "Area type", list(AREA_TYPES), format_func=AREA_TYPES.get, horizontal=True
-)
+# The global radio buttons in the sidebar choose the kind of area; the table gets one
+# row per area of that kind
+area_type, _ = current_area()
+st.caption(f"Area type: **{AREA_TYPES[area_type]}** (change it in the sidebar)")
 areas = areas_of_type(df, area_type)
 
 # First calendar month of the downloaded interval (weekly data -> 4-5 values per column)
