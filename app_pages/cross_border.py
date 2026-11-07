@@ -77,6 +77,31 @@ with right:
     else:
         hourly = load_hourly(year, tuple(sorted(chosen)))
         series = sorted(hourly["series"].unique())
+        # 18 lines in one chart are crowded (part 2 peer review), so the default is one
+        # small panel per connection with out/in as two colours
+        split = st.toggle("One panel per connection", value=True)
+        if split:
+            hourly["Direction"] = hourly["direction"].map(DIRECTION_NAMES)
+            panels = (
+                alt.Chart(hourly)
+                .mark_line(strokeWidth=1)
+                .encode(
+                    x=alt.X("time:T", title="Time (UTC)"),
+                    y=alt.Y("mw:Q", title="MW"),
+                    color=alt.Color(
+                        "Direction:N",
+                        scale=alt.Scale(
+                            domain=list(DIRECTION_NAMES.values()), range=[PALETTE[1], PALETTE[0]]
+                        ),
+                    ),
+                    tooltip=["time:T", "Direction:N", alt.Tooltip("mw:Q", format=",.0f")],
+                )
+                .properties(height=70)
+                .facet(row=alt.Row("connection:N", title=None, header=alt.Header(labelAngle=0, labelAlign="left")))
+                .properties(title=f"Hourly power flow, {year}")
+            )
+            st.altair_chart(panels)
+    if chosen and not split:
         lines = (
             alt.Chart(hourly, title=f"Hourly power flow, {year}")
             .mark_line(strokeWidth=1)

@@ -6,3 +6,6 @@ matplotlib
 plotly
 requests
 pymongo
+scipy
+statsmodels
+scikit-learn

@@ -63,3 +63,10 @@ def load_hourly(year: int, months: tuple[int, ...]) -> pd.DataFrame:
             )
         )
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner="Reading sampled locations from MongoDB...")
+def load_locations() -> pd.DataFrame:
+    """The 1000 random land locations per area (written by notebook part 3, section 3)."""
+    db = _client()[st.secrets["mongo"]["database"]]
+    return pd.DataFrame(list(db["locations"].find({}, {"_id": 0})))

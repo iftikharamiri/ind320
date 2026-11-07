@@ -7,10 +7,14 @@ Project work for IND320 at NMBU.
 ```
 .
 ├── .streamlit/config.toml
-├── modules/            shared logic imported by pages (data.py = NVE API, mongo.py = MongoDB)
-├── app_pages/          Streamlit pages (home, data table, plots, cross-border flows, about)
+├── modules/            shared logic imported by pages (data.py = NVE API, mongo.py = MongoDB,
+│                       weather.py = open-meteo, analysis.py = SPC/LOF/STL/spectrogram,
+│                       selector.py = global area selector)
+├── app_pages/          Streamlit pages (home, data table, plots, STL and spectrogram,
+│                       weather outliers and anomalies, cross-border flows, about)
+├── data/areas/         area outlines from NVE (GeoJSON)
 ├── notebooks/          project_work_partN.ipynb (+ PDF export)
-├── screencast/         part 1 and part 2 screencasts
+├── screencast/         screencasts for each part
 ├── main.py             app entry point
 └── requirements.txt
 ```
@@ -21,6 +25,9 @@ Project work for IND320 at NMBU.
 - **Cross-border power flows:** ENTSO-E Transparency Platform -> Spark -> Cassandra (local)
   -> Spark -> MongoDB Atlas. The app reads the curated data from MongoDB.
   The pipeline is in `notebooks/project_work_part2.ipynb`.
+- **Weather:** open-meteo Historical Weather API (ERA5), downloaded live by the app for
+  random land locations in the chosen area (cached for a week). The 1000 locations per
+  area are sampled in `notebooks/project_work_part3.ipynb` and stored in MongoDB.
 
 ## Secrets
 

@@ -67,7 +67,13 @@ def _download() -> pd.DataFrame:
     df = df.drop(columns="next_publish_date")
     df["area"] = [_area_label(t, n) for t, n in zip(df["area_type"], df["area_number"])]
     # The API returns the rows shuffled; sort so every area is a clean time series
-    return df.sort_values(["area", "date"]).reset_index(drop=True)
+    df = df.sort_values(["area", "date"]).reset_index(drop=True)
+    # The first week of each area (Jan 1995) has a "previous week" from Dec 1994, which is
+    # not in the data and gives an implausible change (e.g. -0.15 in one week for NO2).
+    # Blank it out, so the plots don't start with a big dip (part 2 peer review).
+    first_week = ~df["area"].duplicated()
+    df.loc[first_week, ["fill_level_prev_week", "fill_level_change"]] = float("nan")
+    return df
 
 
 def load_reservoirs(start=None, end=None) -> pd.DataFrame:

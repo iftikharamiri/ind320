@@ -25,11 +25,20 @@ with st.container(horizontal=True):
 st.subheader("Pages")
 st.markdown(
     """
+**Reservoirs (NVE)**
 - :material/table: **Data table**: one row per area, with small charts of the first month.
-- :material/show_chart: **Plots**: choose a download interval and a type of area, then plot the columns.
-- :material/swap_horiz: **Cross-border flows**: power exchange between Norway and its neighbours (ENTSO-E, via MongoDB).
-- :material/info: **About**: data source and project links.
+- :material/show_chart: **Plots**: choose a download interval, then plot the columns of the chosen areas.
+- :material/waterfall_chart: **STL and spectrogram**: the fill level split into trend, season and residual, and its frequency content over time.
 
-Use the menu in the sidebar to switch pages.
+**Weather (open-meteo)**
+- :material/rainy: **Outliers and anomalies**: hourly ERA5 weather for the chosen area; heavy-rain outliers (SPC) and temperature anomalies (LOF).
+
+**Power exchange (ENTSO-E)**
+- :material/swap_horiz: **Cross-border flows**: power exchange between Norway and its neighbours (via MongoDB).
+
+:material/info: **About**: data sources and project links.
+
+The **area selector** at the top of the sidebar is shared by all reservoir and weather
+pages, so the weather always belongs to the same area as the reservoir data.
 """
 )
