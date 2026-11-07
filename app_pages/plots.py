@@ -34,6 +34,14 @@ start_m, end_m = st.select_slider(
 start = pd.Period(start_m, freq="M").start_time
 end = pd.Period(end_m, freq="M").end_time
 st.session_state["interval"] = (start, end)  # the Data table page reads this
+# The default of one month is an assignment requirement (part 1), but on its own it can
+# look like an error, so say so (part 3 feedback)
+if start_m == end_m == months[0]:
+    st.info(
+        "The slider starts at the first month of the data, as the assignment asks. "
+        "Drag the right handle to see a longer period.",
+        icon=":material/info:",
+    )
 
 df = load_reservoirs(start, end)
 period_text = month_name(start_m) if start_m == end_m else f"{month_name(start_m)} - {month_name(end_m)}"
@@ -62,7 +70,8 @@ long = subset.melt(
 long["label"] = long["column"].map(lambda c: MEASURES[c][0])
 
 # One colour per area of the chosen type (the palette has 5 colours, enough for NO1-NO5)
-color = alt.Color("area:N", scale=alt.Scale(domain=areas, range=PALETTE[: len(areas)]), title="Area")
+area_scale = alt.Scale(domain=areas, range=PALETTE[: len(areas)])
+color = alt.Color("area:N", scale=area_scale, title="Area")
 x = alt.X("date:T", title="Date")
 tooltip = [
     alt.Tooltip("date:T", title="Week of"),
@@ -84,32 +93,27 @@ if column != ALL:
             tooltip=tooltip,
         )
     )
-    st.altair_chart(chart)
+    st.altair_chart(chart, width="stretch")
 else:
     # The columns have very different scales (0-1 vs up to ~87 TWh), so one shared
-    # y-axis would flatten most lines: one panel per column with its own y-axis.
-    chart = (
-        alt.Chart(long)
-        .mark_line(point=True, strokeWidth=2)
-        .encode(
-            x=x,
-            y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
-            color=color,
-            tooltip=tooltip,
+    # y-axis would flatten most lines: one chart per column with its own y-axis.
+    # Separate charts (not an Altair facet) so each can use the full page width,
+    # which makes them easier to read (part 3 feedback).
+    st.markdown(f"**All columns, {period_text}**")
+    for i, label in enumerate(LABELS):
+        panel = (
+            alt.Chart(long[long["label"] == label], title=label)
+            .mark_line(point=True, strokeWidth=2)
+            .encode(
+                x=x,
+                y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
+                # Legend only on the first chart; the colours are the same in all
+                color=color if i == 0 else alt.Color("area:N", scale=area_scale, legend=None),
+                tooltip=tooltip,
+            )
+            .properties(height=170)
         )
-        .properties(width=560, height=110)
-        .facet(
-            row=alt.Row(
-                "label:N",
-                title=None,
-                sort=LABELS,
-                header=alt.Header(labelAngle=0, labelAlign="left", labelLimit=220),
-            ),
-            title=f"All columns, {period_text}",
-        )
-        .resolve_scale(y="independent")
-    )
-    st.altair_chart(chart)
+        st.altair_chart(panel, width="stretch")
     st.caption(
         "Each panel has its own y-axis, because the columns use very different "
         "units. Capacity is constant per area, so its lines are flat."
