@@ -10,7 +10,10 @@ from modules.selector import current_area
 st.title("Plots")
 
 ALL = "All columns"
-LABELS = [label for label, _ in MEASURES.values()]
+# Capacity is left out: it is the same every week since 1995 (e.g. 87.4 TWh for Norway),
+# so its line is flat and tells nothing new (part 3 feedback). It is shown as a number below.
+PLOTTED = [c for c in MEASURES if c != "capacity_TWh"]
+LABELS = [MEASURES[c][0] for c in PLOTTED]
 
 
 def month_name(month: str) -> str:
@@ -52,9 +55,14 @@ period_text = month_name(start_m) if start_m == end_m else f"{month_name(start_m
 area_type, _ = current_area()
 st.caption(f"Area type: **{AREA_TYPES[area_type]}** (change it in the sidebar)")
 areas = areas_of_type(df, area_type)
+capacity = df[df["area"].isin(areas)].groupby("area")["capacity_TWh"].first().reindex(areas)
+st.caption(
+    "Reservoir capacity (constant since 1995, so not plotted): "
+    + ", ".join(f"{a} {v:.1f} TWh" for a, v in capacity.items())
+)
 column = st.selectbox(
     "Column",
-    [ALL, *MEASURES],
+    [ALL, *PLOTTED],
     format_func=lambda c: c if c == ALL else MEASURES[c][0],
 )
 
@@ -63,7 +71,7 @@ column = st.selectbox(
 subset = df[df["area"].isin(areas)]
 long = subset.melt(
     id_vars=["date", "area"],
-    value_vars=list(MEASURES),
+    value_vars=PLOTTED,
     var_name="column",
     value_name="value",
 )
@@ -115,6 +123,5 @@ else:
         )
         st.altair_chart(panel, width="stretch")
     st.caption(
-        "Each panel has its own y-axis, because the columns use very different "
-        "units. Capacity is constant per area, so its lines are flat."
+        "Each chart has its own y-axis, because the columns use very different units."
     )
