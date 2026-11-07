@@ -93,7 +93,7 @@ if column != ALL:
             tooltip=tooltip,
         )
     )
-    st.altair_chart(chart, width="stretch")
+    st.altair_chart(chart.properties(height=450), width="stretch")
 else:
     # The columns have very different scales (0-1 vs up to ~87 TWh), so one shared
     # y-axis would flatten most lines: one chart per column with its own y-axis.
@@ -111,7 +111,7 @@ else:
                 color=color if i == 0 else alt.Color("area:N", scale=area_scale, legend=None),
                 tooltip=tooltip,
             )
-            .properties(height=170)
+            .properties(height=320)  # tall enough to read the y-axis (part 3 feedback)
         )
         st.altair_chart(panel, width="stretch")
     st.caption(
