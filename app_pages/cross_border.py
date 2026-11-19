@@ -1,14 +1,14 @@
 """Power exchange page: yearly in/out pie chart (left) and hourly lines for chosen months (right).
 
-Explore group. Altair charts are interactive already; their colours come from the
-Nordic palette (modules/data.PALETTE: out = coral, in = fjord blue).
+Explore group. Part 4: the Altair charts were replaced by Plotly, so every chart in the
+app has the same look (part 3 peer review). Colours: out = coral, in = fjord blue.
 """
 
-import altair as alt
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
-from modules.data import PALETTE
+from modules.palette import CORAL, FJORD
 from modules.mongo import load_hourly, load_overview
 from modules.ui import page_header
 
@@ -29,6 +29,7 @@ if overview.empty:
 
 MONTH_NAMES = {m: pd.Timestamp(2000, m, 1).strftime("%b") for m in range(1, 13)}
 DIRECTION_NAMES = {"out": "Out of Norway", "in": "Into Norway"}
+DIRECTION_COLOURS = {"Out of Norway": CORAL, "Into Norway": FJORD}
 
 left, right = st.columns(2)
 
@@ -50,22 +51,11 @@ with left:
     )
     pie_data["GWh"] = pie_data["total_mwh"] / 1000
     pie_data["Direction"] = pie_data["direction"].map(DIRECTION_NAMES)
-    pie = (
-        alt.Chart(pie_data, title=f"{connection}, {year}")
-        .mark_arc(innerRadius=50)
-        .encode(
-            theta="GWh:Q",
-            color=alt.Color(
-                "Direction:N",
-                # Nordic palette: out = coral (PALETTE[1]), in = fjord blue (PALETTE[0])
-                scale=alt.Scale(
-                    domain=list(DIRECTION_NAMES.values()), range=[PALETTE[1], PALETTE[0]]
-                ),
-            ),
-            tooltip=["Direction:N", alt.Tooltip("GWh:Q", format=",.0f")],
-        )
-    )
-    st.altair_chart(pie)
+    # Donut chart of the yearly energy in each direction
+    pie = px.pie(pie_data, names="Direction", values="GWh", hole=0.45, title=f"{connection}, {year}",
+                 color="Direction", color_discrete_map=DIRECTION_COLOURS)
+    pie.update_traces(hovertemplate="%{label}: %{value:,.0f} GWh (%{percent})<extra></extra>")
+    st.plotly_chart(pie)
     st.caption("Sum of the hourly power values; 1 MW for one hour = 1 MWh.")
 
 # --- Right: months (pills) -> hourly line plot --------------------------------
@@ -84,50 +74,28 @@ with right:
         st.info("Pick at least one month.")
     else:
         hourly = load_hourly(year, tuple(sorted(chosen)))
-        series = sorted(hourly["series"].unique())
         # 18 lines in one chart are crowded (part 2 peer review), so the default is one
         # small panel per connection with out/in as two colours
         split = st.toggle("One panel per connection", value=True)
+        hourly["Direction"] = hourly["direction"].map(DIRECTION_NAMES)
         if split:
-            hourly["Direction"] = hourly["direction"].map(DIRECTION_NAMES)
-            panels = (
-                alt.Chart(hourly)
-                .mark_line(strokeWidth=1)
-                .encode(
-                    x=alt.X("time:T", title="Time (UTC)"),
-                    y=alt.Y("mw:Q", title="MW"),
-                    color=alt.Color(
-                        "Direction:N",
-                        scale=alt.Scale(
-                            domain=list(DIRECTION_NAMES.values()), range=[PALETTE[1], PALETTE[0]]
-                        ),
-                    ),
-                    tooltip=["time:T", "Direction:N", alt.Tooltip("mw:Q", format=",.0f")],
-                )
-                .properties(height=70)
-                .facet(row=alt.Row("connection:N", title=None, header=alt.Header(labelAngle=0, labelAlign="left")))
-                .properties(title=f"Hourly power flow, {year}")
-            )
-            st.altair_chart(panels)
+            # One small panel per connection, out/in as two colours, shared time axis
+            n = hourly["connection"].nunique()
+            panels = px.line(hourly, x="time", y="mw", color="Direction", facet_row="connection",
+                             color_discrete_map=DIRECTION_COLOURS, title=f"Hourly power flow, {year}",
+                             labels={"time": "Time (UTC)", "mw": ""}, height=110 * n + 120)
+            panels.update_traces(line_width=1)
+            panels.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1], textangle=0, xanchor="left"))
+            panels.update_yaxes(matches=None, showticklabels=True, nticks=3)
+            panels.update_layout(legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0))
+            st.plotly_chart(panels)
     if chosen and not split:
-        lines = (
-            alt.Chart(hourly, title=f"Hourly power flow, {year}")
-            .mark_line(strokeWidth=1)
-            .encode(
-                x=alt.X("time:T", title="Time (UTC)"),
-                y=alt.Y("mw:Q", title="Power (MW)"),
-                color=alt.Color(
-                    "series:N",
-                    # 18 lines: category20 has 10 dark/light pairs, one pair per connection
-                    # (the sorted names put "in" and "out" of a connection next to each other)
-                    scale=alt.Scale(domain=series, scheme="category20"),
-                    title="Connection and direction",
-                ),
-                strokeDash=alt.StrokeDash("direction:N", legend=None),
-                tooltip=["time:T", "series:N", alt.Tooltip("mw:Q", format=",.0f")],
-            )
-        )
-        st.altair_chart(lines)
+        # All 18 lines in one chart: one colour per connection, dashed lines for "in"
+        lines = px.line(hourly, x="time", y="mw", color="connection", line_dash="Direction",
+                        title=f"Hourly power flow, {year}", labels={"time": "Time (UTC)", "mw": "Power (MW)"},
+                        height=520)
+        lines.update_traces(line_width=1)
+        st.plotly_chart(lines)
 
 # --- Documentation of the data source -----------------------------------------
 with st.expander("About the data"):

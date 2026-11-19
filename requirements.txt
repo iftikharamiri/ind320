@@ -1,11 +1,10 @@
 streamlit
-altair
 pandas
 numpy
-matplotlib
 plotly
 requests
 pymongo
 scipy
 statsmodels
 scikit-learn
+river
