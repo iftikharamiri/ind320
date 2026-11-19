@@ -28,25 +28,69 @@ VARIABLES = [
 ]
 
 
-def _download_point(lon: float, lat: float, start: str, end: str, variables: list[str]) -> dict:
+# Daily variables for the long weekly history (part 4): map colours, correlations and
+# exogenous inputs to the forecasts. Sums for amounts, means for states (see WEEKLY_HOW).
+DAILY_VARIABLES = [
+    "temperature_2m_mean",
+    "precipitation_sum",
+    "rain_sum",
+    "snowfall_sum",
+    "wind_speed_10m_mean",
+    "relative_humidity_2m_mean",
+    "cloud_cover_mean",
+    "shortwave_radiation_sum",
+    "et0_fao_evapotranspiration",
+]
+# How each daily variable becomes a weekly value
+WEEKLY_HOW = {
+    "temperature_2m_mean": "mean",
+    "precipitation_sum": "sum",
+    "rain_sum": "sum",
+    "snowfall_sum": "sum",
+    "wind_speed_10m_mean": "mean",
+    "relative_humidity_2m_mean": "mean",
+    "cloud_cover_mean": "mean",
+    "shortwave_radiation_sum": "sum",
+    "et0_fao_evapotranspiration": "sum",
+}
+
+
+def _download_point(
+    lon: float,
+    lat: float,
+    start: str,
+    end: str,
+    variables: list[str],
+    resolution: str = "hourly",
+    timezone: str = "UTC",
+) -> dict:
     """One open-meteo request for one location; retried on rate limits and server errors.
 
     open-meteo answers HTTP 429 when too many requests arrive at once, and now and then
     a 5xx. Waiting 2, 4, 8, ... seconds and trying again is the standard remedy.
+    `resolution` is "hourly" or "daily". Daily values are sums/means over a calendar
+    day in `timezone`, so for daily data the time zone matters (see part 4 notebook).
     """
     params = {
         "latitude": round(lat, 4),
         "longitude": round(lon, 4),
         "start_date": start,
         "end_date": end,
-        "hourly": ",".join(variables),
+        resolution: ",".join(variables),
         "models": "era5",  # the reanalysis model asked for in the assignment
-        "timezone": "UTC",
+        "timezone": timezone,
     }
     for attempt in range(6):
         response = requests.get(ARCHIVE_URL, params=params, timeout=300)
         if response.status_code == 200:
             return response.json()
+        if response.status_code == 429:
+            # The per-minute limit passes in seconds, so waiting helps. The hourly and
+            # daily limits do not, so fail at once with open-meteo's own explanation
+            # instead of letting the user wait minutes for nothing.
+            reason = response.json().get("reason", "") if response.content else ""
+            if "Hourly" in reason or "Daily" in reason:
+                raise RuntimeError(f"open-meteo: {reason}")
         if response.status_code == 429 or response.status_code >= 500:
             time.sleep(2 ** (attempt + 1))
             continue
@@ -102,3 +146,27 @@ def area_average(weather: pd.DataFrame) -> pd.DataFrame:
     """Average over the downloaded locations: one row per hour, indexed by time."""
     columns = [c for c in weather.columns if c not in ("time", "location", "grid_lat", "grid_lon")]
     return weather.groupby("time")[columns].mean()
+
+
+def download_daily_point(lon: float, lat: float, start: str, end: str) -> pd.DataFrame:
+    """Daily ERA5 values for one point, days in Norwegian local time (Europe/Oslo).
+
+    Local days are used because the reservoir weeks (Magasinstatistikk) and the currency
+    rates (Norges Bank) are Norwegian calendar dates, not UTC.
+    """
+    answer = _download_point(lon, lat, start, end, DAILY_VARIABLES, "daily", "Europe/Oslo")
+    daily = pd.DataFrame(answer["daily"])
+    daily["time"] = pd.to_datetime(daily["time"])
+    return daily
+
+
+def to_weekly(daily: pd.DataFrame) -> pd.DataFrame:
+    """Daily values -> ISO weeks (Monday-Sunday), labelled by the Sunday.
+
+    Magasinstatistikk dates each week by its Sunday, so this label makes the weather
+    weeks line up exactly with the reservoir weeks. Incomplete weeks are dropped.
+    """
+    daily = daily.set_index("time").sort_index()
+    weekly = daily[list(WEEKLY_HOW)].resample("W-SUN").agg(WEEKLY_HOW)
+    days = daily[list(WEEKLY_HOW)[0]].resample("W-SUN").count()
+    return weekly[days == 7]

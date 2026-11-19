@@ -1,4 +1,8 @@
-"""Cross-border page: yearly in/out pie chart (left) and hourly lines for chosen months (right)."""
+"""Power exchange page: yearly in/out pie chart (left) and hourly lines for chosen months (right).
+
+Explore group. Altair charts are interactive already; their colours come from the
+Nordic palette (modules/data.PALETTE: out = coral, in = fjord blue).
+"""
 
 import altair as alt
 import pandas as pd
@@ -6,8 +10,12 @@ import streamlit as st
 
 from modules.data import PALETTE
 from modules.mongo import load_hourly, load_overview
+from modules.ui import page_header
 
-st.title("Cross-border power flows")
+page_header(
+    "Power exchange", "explore",
+    "Cross-border physical flows between Norway and its neighbours (ENTSO-E, stored in MongoDB).",
+)
 
 try:
     overview = load_overview()  # small table from MongoDB, see modules/mongo.py
@@ -49,7 +57,7 @@ with left:
             theta="GWh:Q",
             color=alt.Color(
                 "Direction:N",
-                # Same colours as the notebook: out = orange, in = blue
+                # Nordic palette: out = coral (PALETTE[1]), in = fjord blue (PALETTE[0])
                 scale=alt.Scale(
                     domain=list(DIRECTION_NAMES.values()), range=[PALETTE[1], PALETTE[0]]
                 ),

@@ -70,3 +70,18 @@ def load_locations() -> pd.DataFrame:
     """The 1000 random land locations per area (written by notebook part 3, section 3)."""
     db = _client()[st.secrets["mongo"]["database"]]
     return pd.DataFrame(list(db["locations"].find({}, {"_id": 0})))
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner="Reading weekly weather from MongoDB...")
+def load_weather_weekly() -> pd.DataFrame:
+    """Weekly ERA5 weather per area since 2015 (written by notebook part 4, section 3).
+
+    One row per area and week (labelled by its Sunday, like Magasinstatistikk), one
+    column per weather variable. Small (~6000 rows), so it is read once and cached; the
+    pages filter it. Area names are the app names: NO1-NO5, Norway, Watercourse 1-3.
+    """
+    db = _client()[st.secrets["mongo"]["database"]]
+    df = pd.DataFrame(list(db["weather_weekly"].find({}, {"_id": 0})))
+    if not df.empty:
+        df["week"] = pd.to_datetime(df["week"])
+    return df

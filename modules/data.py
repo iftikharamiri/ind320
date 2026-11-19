@@ -40,7 +40,8 @@ MEASURES = {
 }
 
 # Colour-blind-checked categorical palette, same order as in the notebook
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
+# Nordic water palette (part 4), same order as modules/palette.py: fjord blue, coral, teal, ...
+PALETTE = ["#0b5e7e", "#e4572e", "#1b9aaa", "#e9b44c", "#3a8f6e"]
 
 
 def _area_label(area_type: str, area_number: int) -> str:
