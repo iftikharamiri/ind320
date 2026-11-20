@@ -32,9 +32,10 @@ WEATHER = {
     "shortwave_radiation_sum": "Solar radiation",
 }
 CURRENCY = {"EUR": "EUR/NOK rate", "USD": "USD/NOK rate"}
-# Defaults = best setting in the notebook tests (section 5)
-DEFAULTS = dict(model="lag_ml", p=2, history_years=10, horizon=26, memory=13,
-                learning_rate=0.01, exog=["snowfall_sum", "precipitation_sum"])
+# Defaults = best setting in the notebook tests (part 4, section 6): MAE 0.050 over
+# 60 backtests vs 0.086 for the normal seasonal curve alone
+DEFAULTS = dict(model="lag_ml", p=2, history_years=10, horizon=26, memory=4,
+                learning_rate=0.05, exog=["precipitation_sum", "temperature_2m_mean"])
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner="Downloading exchange rates from Norges Bank...")

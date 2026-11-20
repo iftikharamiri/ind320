@@ -47,7 +47,9 @@ change = rates.iloc[-1] / rates.loc[: rates.index[-1] - pd.DateOffset(years=1)].
 with st.container(horizontal=True):
     st.metric("NOK per EUR", f"{latest['EUR']:.3f}", f"{change['EUR']:+.1%} in a year", delta_color="inverse", border=True)
     st.metric("NOK per USD", f"{latest['USD']:.3f}", f"{change['USD']:+.1%} in a year", delta_color="inverse", border=True)
-    st.metric("Latest rate", rates.index[-1].strftime("%d %b %Y"), border=True)
+    # Monthly and yearly averages are dated by their first day; show the period instead
+    period_format = {"B": "%d %b %Y", "M": "%B %Y", "A": "%Y"}[frequency]
+    st.metric("Latest value", rates.index[-1].strftime(period_format), border=True)
 
 long = shown.reset_index().melt(id_vars="date", var_name="currency", value_name="NOK")
 fig = px.line(
