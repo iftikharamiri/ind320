@@ -41,7 +41,9 @@ def download_rates(
     # Semicolon-separated table with one row per currency and date
     raw = pd.read_csv(StringIO(response.text), sep=";")
     rates = raw.pivot(index="TIME_PERIOD", columns="BASE_CUR", values="OBS_VALUE")
-    rates.index = pd.to_datetime(rates.index)
+    # str first: yearly periods ("2015") are read as integers, which to_datetime
+    # would take as nanoseconds since 1970
+    rates.index = pd.to_datetime(rates.index.astype(str))
     rates.index.name = "date"
     rates.columns.name = None
     return rates.astype(float).sort_index()
