@@ -8,11 +8,14 @@ Project work for IND320 at NMBU.
 .
 ├── .streamlit/config.toml
 ├── modules/            shared logic imported by pages (data.py = NVE API, mongo.py = MongoDB,
-│                       weather.py = open-meteo, analysis.py = SPC/LOF/STL/spectrogram,
-│                       selector.py = global area selector)
-├── app_pages/          Streamlit pages (home, data table, plots, STL and spectrogram,
-│                       weather outliers and anomalies, cross-border flows, about)
-├── data/areas/         area outlines from NVE (GeoJSON)
+│                       weather.py = open-meteo, analysis.py = SPC/LOF/STL/spectrogram and
+│                       sliding window correlation, forecast.py = River SNARIMAX / lag ML,
+│                       currency.py = Norges Bank, selector.py = shared session state,
+│                       palette.py + ui.py = Nordic theme and page groups)
+├── app_pages/          Streamlit pages, grouped: Overview (map), Explore (reservoirs,
+│                       weather correlation, power exchange, exchange rates), Anomalies
+│                       (weather outliers, reservoir patterns), Predict (forecast), About
+├── data/areas/         area outlines from NVE (GeoJSON; map_areas.geojson for the map)
 ├── notebooks/          project_work_partN.ipynb (+ PDF export)
 ├── screencast/         screencasts for each part
 ├── main.py             app entry point
@@ -28,6 +31,17 @@ Project work for IND320 at NMBU.
 - **Weather:** open-meteo Historical Weather API (ERA5), downloaded live by the app for
   random land locations in the chosen area (cached for a week). The 1000 locations per
   area are sampled in `notebooks/project_work_part3.ipynb` and stored in MongoDB.
+  For part 4, daily ERA5 values (2015 onwards, Norwegian local days) for five points per
+  area are aggregated to weeks ending on Sunday and stored in MongoDB (`weather_weekly`);
+  the map, the correlation page and the forecasts use them.
+- **Currency:** Norges Bank SDMX API (EUR/NOK and USD/NOK), downloaded live by the app.
+
+## Part 4 highlights
+
+- Interactive GeoJSON map: click an area to select it for every page (session state).
+- Forecast of the reservoir fill level with River (SNARIMAX or lag-based linear model),
+  with weather and currency as exogenous inputs, animated in Plotly. Bonus: prediction
+  bands from quantile-loss models.
 
 ## Secrets
 

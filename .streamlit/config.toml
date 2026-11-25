@@ -3,3 +3,35 @@ runOnSave = true
 
 [runner]
 fastReruns = false
+
+# "Nordic water" theme (part 4): deep fjord blue, teal and glacier tones on a calm,
+# light background, with coral as the contrast colour for outliers and selections.
+# The same colours are in modules/palette.py for plots that need a fixed meaning.
+[theme]
+base = "light"
+primaryColor = "#0b5e7e"
+backgroundColor = "#f4f8fa"
+secondaryBackgroundColor = "#e3eef2"
+textColor = "#12303f"
+borderColor = "#c9dbe2"
+linkColor = "#1b9aaa"
+font = "'Source Sans 3':https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap"
+headingFont = "'Source Sans 3':https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@600;700&display=swap"
+baseRadius = "0.6rem"
+showWidgetBorder = true
+blueColor = "#0b5e7e"
+greenColor = "#3a8f6e"
+orangeColor = "#e9b44c"
+redColor = "#e4572e"
+violetColor = "#6c5b9e"
+chartCategoricalColors = ["#0b5e7e", "#e4572e", "#1b9aaa", "#e9b44c", "#3a8f6e", "#6c5b9e", "#4a5d6b", "#7cc6d6"]
+chartSequentialColors = ["#eef7fa", "#d3ecf2", "#b2dde8", "#8ccbdc", "#63b5cc", "#3f9cb8", "#2a82a0", "#1d6785", "#134c66", "#0b334a"]
+dataframeHeaderBackgroundColor = "#e3eef2"
+
+# Dark sidebar, so the menu stands out from the content
+[theme.sidebar]
+backgroundColor = "#0b334a"
+secondaryBackgroundColor = "#134c66"
+textColor = "#eef7fa"
+borderColor = "#1d6785"
+primaryColor = "#7cc6d6"

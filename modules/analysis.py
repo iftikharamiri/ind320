@@ -1,14 +1,16 @@
 """Outlier, anomaly, STL and spectrogram analyses, shared by the notebook and the app.
 
-Every function takes a pandas Series with a DatetimeIndex and returns a matplotlib
-figure (plus a summary for the outlier methods). The same code is in
-notebooks/project_work_part3.ipynb (sections 5-8), where each function is tested.
+Every function takes a pandas Series with a DatetimeIndex and returns a Plotly figure
+(plus a summary for the outlier methods). Part 3 drew these with matplotlib; part 4
+replaced the drawing with interactive Plotly figures (zoom, hover), as the assignment
+asks for dynamic plots. The calculations are unchanged from part 3.
 """
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import pandas as pd
 from scipy.fft import dct, idct
 from scipy.signal import stft
@@ -16,10 +18,12 @@ from scipy.stats import median_abs_deviation
 from sklearn.neighbors import LocalOutlierFactor
 from statsmodels.tsa.seasonal import STL
 
-# Same colour order as in parts 1 and 2: blue for data, red-orange for outliers
-DATA_COLOUR = "#2a78d6"
-OUTLIER_COLOUR = "#e34948"
-BOUNDARY_COLOUR = "#4a4a4a"
+from modules.palette import CORAL, FJORD, SLATE
+
+# Colours with a fixed meaning: deep blue for data, coral for outliers
+DATA_COLOUR = FJORD
+OUTLIER_COLOUR = CORAL
+BOUNDARY_COLOUR = SLATE
 HOURS_PER_YEAR = 365.25 * 24
 
 
@@ -60,16 +64,18 @@ def spc_outliers(series: pd.Series, cutoff: float = 12, n_sd: float = 3):
     lower = seasonal_level + centre - n_sd * robust_sd
     is_outlier = (x > upper) | (x < lower)
 
-    fig, ax = plt.subplots(figsize=(11, 4))
-    ax.plot(series.index, x, color=DATA_COLOUR, linewidth=0.7, label=series.name or "value")
-    ax.plot(series.index, upper, color=BOUNDARY_COLOUR, linestyle="--", linewidth=0.8, label="SPC boundaries")
-    ax.plot(series.index, lower, color=BOUNDARY_COLOUR, linestyle="--", linewidth=0.8)
-    ax.scatter(series.index[is_outlier], x[is_outlier], color=OUTLIER_COLOUR, s=8, zorder=3, label="outliers")
-    ax.set_title(f"SPC outliers (DCT cut-off {cutoff:g}/year, {n_sd:g} robust SD)")
-    ax.set_xlabel("Time (UTC)")
-    ax.set_ylabel(series.name or "value")
-    ax.legend(loc="upper left", frameon=False)
-    fig.tight_layout()
+    name = series.name or "value"
+    fig = go.Figure()
+    fig.add_scatter(x=series.index, y=x, mode="lines", name=name, line=dict(color=DATA_COLOUR, width=1))
+    fig.add_scatter(x=series.index, y=upper, mode="lines", name="SPC boundaries",
+                    line=dict(color=BOUNDARY_COLOUR, width=1, dash="dash"), legendgroup="b")
+    fig.add_scatter(x=series.index, y=lower, mode="lines", name="lower boundary", showlegend=False,
+                    line=dict(color=BOUNDARY_COLOUR, width=1, dash="dash"), legendgroup="b")
+    fig.add_scatter(x=series.index[is_outlier], y=x[is_outlier], mode="markers", name="outliers",
+                    marker=dict(color=OUTLIER_COLOUR, size=5))
+    fig.update_layout(title=f"SPC outliers (DCT cut-off {cutoff:g}/year, {n_sd:g} robust SD)",
+                      xaxis_title="Time (UTC)", yaxis_title=name, hovermode="x unified",
+                      legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0))
 
     outliers = pd.DataFrame(
         {"value": x, "lower": lower, "upper": upper}, index=series.index
@@ -107,14 +113,15 @@ def lof_anomalies(series: pd.Series, proportion: float = 0.01, n_neighbors: int 
     is_anomaly = lof.fit_predict(features) == -1
     scores = -lof.negative_outlier_factor_  # larger = more anomalous
 
-    fig, ax = plt.subplots(figsize=(11, 4))
-    ax.plot(series.index, values, color=DATA_COLOUR, linewidth=0.7, label=series.name or "value")
-    ax.scatter(series.index[is_anomaly], values[is_anomaly], color=OUTLIER_COLOUR, s=10, zorder=3, label="LOF anomalies")
-    ax.set_title(f"LOF anomalies ({proportion:.1%} of the hours, {n_neighbors} neighbours)")
-    ax.set_xlabel("Time (UTC)")
-    ax.set_ylabel(series.name or "value")
-    ax.legend(loc="upper left", frameon=False)
-    fig.tight_layout()
+    name = series.name or "value"
+    fig = go.Figure()
+    fig.add_scatter(x=series.index, y=values, mode="lines", name=name, line=dict(color=DATA_COLOUR, width=1))
+    fig.add_scatter(x=series.index[is_anomaly], y=values[is_anomaly], mode="markers", name="LOF anomalies",
+                    marker=dict(color=OUTLIER_COLOUR, size=6), customdata=scores[is_anomaly],
+                    hovertemplate="%{x}<br>%{y:.2f}<br>LOF score %{customdata:.2f}<extra></extra>")
+    fig.update_layout(title=f"LOF anomalies ({proportion:.1%} of the hours, {n_neighbors} neighbours)",
+                      xaxis_title="Time (UTC)", yaxis_title=name,
+                      legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0))
 
     anomalies = pd.DataFrame({"value": values, "lof_score": scores}, index=series.index)[is_anomaly]
     summary = {
@@ -154,20 +161,23 @@ def stl_decomposition(
         "Seasonal": result.seasonal,
         "Residual": result.resid,
     }
-    fig, axes = plt.subplots(4, 1, figsize=(11, 8), sharex=True)
-    for ax, (name, values) in zip(axes, parts.items()):
+    # Four panels sharing the time axis, so zooming one zooms all
+    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.04,
+                        subplot_titles=list(parts))
+    for row, (name, values) in enumerate(parts.items(), start=1):
         if name == "Residual":
-            ax.scatter(series.index, values, s=3, color=DATA_COLOUR)
-            ax.axhline(0, color=BOUNDARY_COLOUR, linewidth=0.8)
+            fig.add_scatter(x=series.index, y=values, mode="markers", name=name, row=row, col=1,
+                            marker=dict(color=DATA_COLOUR, size=3))
+            fig.add_hline(y=0, line=dict(color=BOUNDARY_COLOUR, width=1), row=row, col=1)
         else:
-            ax.plot(series.index, values, color=DATA_COLOUR, linewidth=1)
-        ax.set_ylabel(name)
-    axes[0].set_title(
-        f"STL of {series.name or 'series'} (period {period}, seasonal {seasonal}, "
-        f"trend {trend}, robust={robust})"
+            fig.add_scatter(x=series.index, y=values, mode="lines", name=name, row=row, col=1,
+                            line=dict(color=DATA_COLOUR, width=1.3))
+    fig.update_layout(
+        title=f"STL of {series.name or 'series'} (period {period}, seasonal {seasonal}, "
+        f"trend {trend}, robust={robust})",
+        height=750, showlegend=False, hovermode="x unified",
     )
-    axes[-1].set_xlabel("Date")
-    fig.tight_layout()
+    fig.update_xaxes(title_text="Date", row=4, col=1)
     return fig
 
 
@@ -189,12 +199,53 @@ def spectrogram(series: pd.Series, window: int = 156, overlap: int = 130, max_fr
 
     # stft gives times in years from the start; convert to dates for the x-axis
     dates = series.index[0] + pd.to_timedelta(times * 365.25, unit="D")
-    fig, ax = plt.subplots(figsize=(11, 4))
-    mesh = ax.pcolormesh(dates, freqs, np.abs(z), shading="gouraud", cmap="viridis")
-    ax.set_ylim(0, min(max_frequency, freqs.max()))
-    ax.set_title(f"Spectrogram of {series.name or 'series'} (window {window}, overlap {overlap} samples)")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Frequency (cycles per year)")
-    fig.colorbar(mesh, ax=ax, label="Amplitude")
-    fig.tight_layout()
+    keep = freqs <= max_frequency
+    fig = go.Figure(go.Heatmap(
+        x=dates, y=freqs[keep], z=np.abs(z)[keep], zsmooth="best",
+        colorscale="Viridis", colorbar=dict(title="Amplitude"),
+        hovertemplate="%{x|%Y-%m}<br>%{y:.2f} cycles/year<br>amplitude %{z:.3f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title=f"Spectrogram of {series.name or 'series'} (window {window}, overlap {overlap} samples)",
+        xaxis_title="Date", yaxis_title="Frequency (cycles per year)",
+    )
     return fig
+
+
+def sliding_window_correlation(
+    weather: pd.Series,
+    reservoir: pd.Series,
+    window: int = 26,
+    lag: int = 0,
+):
+    """Sliding window correlation (SWC) between a weather variable and a reservoir variable.
+
+    The weather series is shifted `lag` steps forward in time, so lag = 4 compares the
+    reservoir in week t with the weather in week t - 4 (the weather *leads*). In every
+    window of `window` consecutive weeks, the Pearson correlation is computed; the result
+    shows how the relationship changes over the years and seasons.
+
+    Returns (figure, DataFrame with the aligned series and the correlation).
+    """
+    data = pd.concat(
+        {"weather": weather.shift(lag), "reservoir": reservoir}, axis=1
+    ).dropna()
+    data["correlation"] = data["weather"].rolling(window, min_periods=window).corr(data["reservoir"])
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08,
+                        row_heights=[0.55, 0.45],
+                        subplot_titles=["Both series, standardised (z-scores)",
+                                        f"Correlation in a sliding window of {window} weeks"])
+    for col, name, colour in (("reservoir", reservoir.name or "reservoir", DATA_COLOUR),
+                              ("weather", f"{weather.name or 'weather'} (lag {lag} w)", OUTLIER_COLOUR)):
+        z = (data[col] - data[col].mean()) / data[col].std()
+        fig.add_scatter(x=data.index, y=z, mode="lines", name=name, line=dict(color=colour, width=1.2),
+                        row=1, col=1)
+    fig.add_scatter(x=data.index, y=data["correlation"], mode="lines", name="correlation",
+                    line=dict(color=BOUNDARY_COLOUR, width=1.5), fill="tozeroy",
+                    fillcolor="rgba(27,154,170,0.25)", row=2, col=1)
+    fig.add_hline(y=0, line=dict(color=BOUNDARY_COLOUR, width=1), row=2, col=1)
+    fig.update_yaxes(range=[-1, 1], title_text="r", row=2, col=1)
+    fig.update_layout(height=600, hovermode="x unified",
+                      legend=dict(orientation="h", y=1.06, yanchor="bottom", x=0))
+    return fig, data

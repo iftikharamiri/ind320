@@ -1,13 +1,16 @@
-"""Reservoir analysis page: STL decomposition and spectrogram of the fill level (tabs)."""
+"""Reservoir patterns page: STL decomposition and spectrogram of the fill level (tabs).
 
-import matplotlib.pyplot as plt
+Anomalies group. Part 4: the figures are interactive Plotly charts (they were matplotlib).
+"""
+
 import streamlit as st
 
 from modules.analysis import spectrogram, stl_decomposition
 from modules.data import area_series, load_reservoirs
 from modules.selector import current_area
+from modules.ui import page_header
 
-st.title("Reservoir analysis")
+page_header("Reservoir patterns", "anomalies", "Trend, seasonal cycle and frequency content of the weekly fill level.")
 
 # The area comes from the global selector in the sidebar, so this page always shows the
 # same area as the other Magasinstatistikk pages. The analyses need the whole history
@@ -34,8 +37,7 @@ with stl_tab:
         )
         robust = st.toggle("Robust", value=False, help="Down-weight unusual weeks")
     fig = stl_decomposition(fill, seasonal=seasonal, trend=trend, robust=robust)
-    st.pyplot(fig)
-    plt.close(fig)  # free the memory; Streamlit has already rendered the image
+    st.plotly_chart(fig)
     st.caption(
         "Observed = trend + seasonal + residual. The seasonal panel is the yearly "
         "filling and emptying cycle; the trend shows wet and dry years."
@@ -52,8 +54,7 @@ with spec_tab:
             help="How much consecutive windows share; must be shorter than the window",
         )
     fig = spectrogram(fill, window=window, overlap=overlap)
-    st.pyplot(fig)
-    plt.close(fig)
+    st.plotly_chart(fig)
     st.caption(
         "The bright band at 1 cycle per year is the yearly cycle of the reservoirs; "
         "weaker bands at 2 and 3 are its harmonics (the cycle is not a pure sine)."
