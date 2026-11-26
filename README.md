@@ -17,7 +17,7 @@ Project work for IND320 at NMBU.
 │                       (weather outliers, reservoir patterns), Predict (forecast), About
 ├── data/areas/         area outlines from NVE (GeoJSON; map_areas.geojson for the map)
 ├── notebooks/          project_work_partN.ipynb (+ PDF export)
-├── screencast/         screencasts for each part
+├── screencast/         screencasts for parts 1-3 (part 4 is on Panopto, link below)
 ├── main.py             app entry point
 └── requirements.txt
 ```
@@ -37,6 +37,8 @@ Project work for IND320 at NMBU.
 - **Currency:** Norges Bank SDMX API (EUR/NOK and USD/NOK), downloaded live by the app.
 
 ## Part 4 highlights
+
+Screencast: https://nmbu.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=f7491075-00ce-4ae7-9ff8-b50e007969eb
 
 - Interactive GeoJSON map: click an area to select it for every page (session state).
 - Forecast of the reservoir fill level with River (SNARIMAX or lag-based linear model),
